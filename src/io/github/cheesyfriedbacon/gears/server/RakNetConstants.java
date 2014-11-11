@@ -12,5 +12,7 @@ public class RakNetConstants {
 		(byte) 0x56, (byte) 0x78
 	};
 	
+	public static final int RAKNET_MAGIC_LENGTH = RAKNET_MAGIC.length;
+	
 	public static final String RAKNET_MAGIC_STRING = "0x00ffff00fefefefefdfdfdfd12345678";
 }

@@ -1,16 +1,20 @@
 package io.github.cheesyfriedbacon.gears.server;
 
 import io.github.cheesyfriedbacon.gears.packet.ConnectedPongPacket;
+import io.github.cheesyfriedbacon.gears.packet.OpenConnectionReply2Packet;
+import io.github.cheesyfriedbacon.gears.packet.OpenConnectionReplyPacket;
+import io.github.cheesyfriedbacon.gears.packet.OpenConnectionRequest2Packet;
+import io.github.cheesyfriedbacon.gears.packet.OpenConnectionRequestPacket;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Random;
 
 /**
  * A Gears Server.
@@ -18,9 +22,22 @@ import java.util.Arrays;
  */
 public class GearsServer {
 	/**
+	 * The default packet size.
+	 */
+	public static final int PACKET_SIZE = 4098;
+
+	/**
 	 * The port that the server runs on.
 	 */
 	private int port = 19132;
+	
+	/**
+	 * The unique ID for this server.
+	 */
+	private byte[] serverID = new byte[] {
+		0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00
+	};
 	
 	/**
 	 * Is the server?
@@ -31,12 +48,22 @@ public class GearsServer {
 	 * The current DatagramSocket.
 	 */
 	private DatagramSocket datagramSocket = null;
+	
+	/**
+	 * List of client IDs.
+	 */
+	private ArrayList<Long> clientIDs = new ArrayList<Long>();
 
 	/**
 	 * Is this server quiet?
 	 * If it is, it produces no STDOUT input.
 	 */
 	private boolean quiet;
+
+	/**
+	 * The random object for this server.
+	 */
+	private Random random;
 	
 	/**
 	 * Constructs a new server.
@@ -47,6 +74,7 @@ public class GearsServer {
 		this.port = port;
 		this.quiet = true;
 		this.datagramSocket = new DatagramSocket(this.port);
+		this.generateNewServerID();
 	}
 	
 	/**
@@ -59,6 +87,20 @@ public class GearsServer {
 		this.port = port;
 		this.quiet = quiet;
 		this.datagramSocket = new DatagramSocket(this.port);
+		this.generateNewServerID();
+	}
+	
+	/**
+	 * Generates a new server ID for this server.
+	 */
+	public void generateNewServerID() {
+		if (this.random == null) { // Looks like we have no random, we
+									// will make another one.
+			this.random = new Random();
+			this.random.setSeed((long) 0xDEADBEEF); // Hehe
+		}
+		
+		new Random().nextBytes(this.serverID);
 	}
 	
 	/**
@@ -140,7 +182,9 @@ public class GearsServer {
 		this.running = true;
 		
 		// Make a new array for received data.
-		byte[] receivedData = new byte[1024];
+		byte[] receivedData = new byte[GearsServer.PACKET_SIZE];
+		
+		if (!quiet) System.out.println("Gears: Server: This server's unique ID is: " + this.getServerID());
 		
 		// Put an alert.
 		if (!quiet) System.out.println("Gears: Server: Started.");
@@ -172,8 +216,48 @@ public class GearsServer {
 				this.sendPacket(finalbytes, fromAddress, fromPort);
 				
 				if (!quiet) System.out.println("Gears: Server: Sent pong!");
+			} else if (data[0] == 0x05) {
+				OpenConnectionRequestPacket ocr_packet = new OpenConnectionRequestPacket(data);
+				ocr_packet.decode();
+				int protocolver = ocr_packet.getProtocolVersion();
+				if (!quiet) System.out.println("Gears: Server: Client attempting connect with protocol " + protocolver + ".");
+				
+				// We will use this to convert the server ID to a long.
+				ByteBuffer bb = ByteBuffer.wrap(this.getServerID());
+				
+				OpenConnectionReplyPacket ocr2_packet = new OpenConnectionReplyPacket(
+						bb.getLong(), 
+						(short) GearsServer.PACKET_SIZE);
+				ocr2_packet.encode();
+				this.sendPacket(ocr2_packet.getByteBuffer().array(), fromAddress, fromPort);
+				if (!quiet) System.out.println("Gears: Server: Sent OpenConnectionReply.");
+			} else if (data[0] == 0x07) {
+				if (!quiet) System.out.println("Gears: Server: Recieved client connect stage 2!");
+				OpenConnectionRequest2Packet ocr_packet = new OpenConnectionRequest2Packet(data);
+				ocr_packet.decode();
+				System.out.println("!!! Size: " + ocr_packet.getMTUSize());
+				
+				// We will use this to convert the server ID to a long.
+				ByteBuffer bb = ByteBuffer.wrap(this.getServerID());
+				
+				OpenConnectionReply2Packet aocr2_packet = new OpenConnectionReply2Packet(
+						bb.getLong(), (short) fromPort, (short) 0);
+				aocr2_packet.encode();
+				
+				this.sendPacket(aocr2_packet.getByteBuffer().array(), fromAddress, fromPort);
+				if (!quiet) System.out.println("Gears: Server: Sent response stage 2!");
+			} else {
+				System.out.println("Gears: Server: !!!! Received unknown packet ID " + this.byteToHexString(data[0]));
 			}
 		}
+	}
+
+	public byte[] getServerID() {
+		return serverID;
+	}
+
+	public boolean isQuiet() {
+		return quiet;
 	}
 
 	/**

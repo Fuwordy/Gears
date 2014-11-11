@@ -8,3 +8,6 @@ Execute the "Main" class.
 
 ## Things Done
 * Display server on the "Play" screen.
+
+## Notices.
+IMPORTANT! **This program is not affiliated with RakNet/Mojang.**

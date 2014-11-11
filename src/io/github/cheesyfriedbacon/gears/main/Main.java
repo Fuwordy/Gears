@@ -11,7 +11,7 @@ public class Main {
 		System.out.println("Gears: Starting server...");
 		
 		try {
-			(new GearsServer(19132)).start();
+			(new GearsServer(19132, false)).start();
 		} catch (SocketException e) {
 			e.printStackTrace();
 		} catch (IOException e) {

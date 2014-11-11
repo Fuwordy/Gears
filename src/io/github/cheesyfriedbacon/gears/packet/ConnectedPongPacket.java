@@ -16,8 +16,21 @@ public class ConnectedPongPacket extends Packet {
 		this.serverIdentifier = identifier;
 	}
 
+	public long getPingID() {
+		return pingID;
+	}
+
+	public long getServerID() {
+		return serverID;
+	}
+
+	public String getServerIdentifier() {
+		return serverIdentifier;
+	}
+
 	@Override
 	public void decode() {
+		// Do nothing, this is STC.
 	}
 
 	@Override
