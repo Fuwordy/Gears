@@ -3,7 +3,7 @@ package io.github.cheesyfriedbacon.gears.main;
 import java.io.IOException;
 import java.net.SocketException;
 
-import io.github.cheesyfriedbacon.gears.server.Server;
+import io.github.cheesyfriedbacon.gears.server.GearsServer;
 
 public class Main {
 	public static void main(String[] args) {
@@ -11,7 +11,7 @@ public class Main {
 		System.out.println("Gears: Starting server...");
 		
 		try {
-			(new Server(19132)).start();
+			(new GearsServer(19132)).start();
 		} catch (SocketException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
